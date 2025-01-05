@@ -30,22 +30,53 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $type = $request->input('type');
+
+        if ($type === 'renter') {
+            $request->validate([
+                'name' => 'required',
+                'email' => 'required',
+                'password' => 'required',
+                'type' => 'required|in:renter,landlord',
+                'phone_number' => 'required',
+                'address' => $type === 'landlord' ? 'required' : 'nullable',
+            ]);
+            
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'type' => $request->type,
+                'phone_number' => $request->phone_number,
+                'address' => $request->address,
+            ]);
+        } else {
+            $request->validate([
+                'name' => 'required',
+                'email' => 'required',
+                'type' => 'required|in:landlord',
+                'password' => 'required',
+                'phone_number' => 'required|digits_between:10,15',
+                'address' => 'required',
+            ]);
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'type' => $request->type,
+                'phone_number' => $request->phone_number,
+                'address' => $request->address,
+            ]);
+        }
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('dashboard'));
     }
 }
